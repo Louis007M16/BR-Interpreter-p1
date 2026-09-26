@@ -1,5 +1,5 @@
 # BR-Interpreter-p1
-Making an interpreter using java programming language, that will execute basic programming language basic operations, variable declaration and  if-else statement. (No functions or Class yet).
+Making an interpreter using java programming language, that will execute basic programming language basic operations, variable declaration and  if-else statement(No functions or Class yet). This project is a programming language school project(Requirements are based on school project).
 # Syntax and Features
 # Comments
 ```br
@@ -8,7 +8,7 @@ npc# This is a comment.
 # Variable
 ```br
 spawn number = 10
-spawn bool = W or L
+spawn bool = W   npc# W= True L=False
 spawn string = "Hello"
 ```
 # Input & Output
