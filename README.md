@@ -52,12 +52,14 @@ yap NAME in start~end
 slay
 ```
 # Switch
+```br
 vibe_check expr
   its_giving value
     npc# body
   ick
     npc# body
 slay
+```
 # Break / Continue
 selling     npc# break
 bounce      npc# continue
