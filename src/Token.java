@@ -1,4 +1,4 @@
-
+// Token.java
 class Token {
     final TokenType type;
     final String lexeme;

@@ -14,11 +14,15 @@ class Lexer {
     private int current = 0;
     private int line = 1;
 
+    boolean hadError = false;
+
     private static final Map<String, TokenType> keywords;
 
     static {
         keywords = new HashMap<>();
         keywords.put("spawn", TokenType.SPAWN);
+        keywords.put("flex", TokenType.FLEX);     
+        keywords.put("rizz", TokenType.RIZZ); 
         keywords.put("alpha", TokenType.ALPHA);
         keywords.put("beta", TokenType.BETA);
         keywords.put("omega", TokenType.OMEGA);
@@ -60,6 +64,7 @@ class Lexer {
             case '+': addToken(TokenType.PLUS); break;
             case '-': addToken(TokenType.MINUS); break;
             case '*': addToken(TokenType.STAR); break;
+            case '%': addToken(TokenType.PERCENT); break;
             case '(': addToken(TokenType.LPAREN); break;
             case ')': addToken(TokenType.RPAREN); break;
             case '~': addToken(TokenType.TILDE); break;
@@ -140,15 +145,33 @@ class Lexer {
         if (isDecimal) {
             addToken(TokenType.NUMBER, Double.parseDouble(text));
         } else {
-            addToken(TokenType.NUMBER, Integer.parseInt(text));
+            try {
+                addToken(TokenType.NUMBER, Integer.parseInt(text));
+            } catch (NumberFormatException e) {
+                error(line, "Number is too large: " + text);
+            }
         }
     }
 
     //string
     private void string() {
+        StringBuilder value = new StringBuilder();
         while (peek() != '"' && !isAtEnd()) {
-            if (peek() == '\n') line++;
-            advance();
+            char c = advance();
+            if (c == '\n') line++;
+            if (c == '\\' && !isAtEnd()) {
+                char next = advance();
+                switch (next) {
+                    case 'n':  value.append('\n'); break;
+                    case 't':  value.append('\t'); break;
+                    case '"':  value.append('"');  break;
+                    case '\\': value.append('\\'); break;
+                    default:
+                        error(line, "Unknown escape sequence '\\" + next + "'.");
+                }
+            } else {
+                value.append(c);
+            }
         }
 
         if (isAtEnd()) {
@@ -159,9 +182,7 @@ class Lexer {
         // closing ".
         advance();
 
-        // Trim the surrounding quotes.
-        String value = source.substring(start + 1, current - 1);
-        addToken(TokenType.STRING, value);
+        addToken(TokenType.STRING, value.toString());
     }
 
 
@@ -216,6 +237,7 @@ class Lexer {
 
     //error
     private void error(int line, String message) {
+        hadError = true;
         System.err.println("[line " + line + "]" + message);
     }
 

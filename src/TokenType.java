@@ -1,8 +1,11 @@
-
+//TokenType.java
 enum TokenType{
 
     // Declare, BOOLEANS
     SPAWN, W, L,
+
+    // Input / Output
+    FLEX, RIZZ,
 
     // Conditional, Loops, Switch
     ALPHA, BETA, OMEGA,
@@ -19,10 +22,10 @@ enum TokenType{
     NUMBER, STRING, IDENTIFIER,
 
     // Symbols
-    PLUS, MINUS, STAR, SLASH, LPAREN, RPAREN, 
+    PLUS, MINUS, STAR, SLASH, PERCENT,LPAREN, RPAREN, 
     EQUAL, EQUAL_EQUAL, BANG_EQUAL, BANG,
     LESS, GREATER, LESS_EQUAL, GREATER_EQUAL, TILDE,
 
-    EOF
+    NEWLINE, EOF
 
 }
