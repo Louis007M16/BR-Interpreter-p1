@@ -4,18 +4,24 @@
 java Main
  */
 public class Main {
-    public static void main(String[] args) {
-       String source =
-            "spawn x = 10.5 npc# a comment\n" +
-            "alpha x > 5\n" +
-            "  flex(\"big\")\n" +
-            "slay\n";
-
-        System.out.println("Source code: " + source);
-
-        Lexer lexer = new Lexer(source);
-        for (Token token : lexer.scanTokens()) {
-            System.out.println(token);
+    public static void main(String[] args) throws IOException {
+       if (args.length != 1) {
+            System.err.println("Usage: java Main <file.br>");
+            System.exit(64);
         }
+ 
+        String source = Files.readString(Paths.get(args[0]));
+ 
+        Lexer lexer = new Lexer(source);
+        List<Token> tokens = lexer.scanTokens();
+        if (lexer.hadError) System.exit(65);        // don't run a program that failed to lex
+ 
+        Parser parser = new Parser(tokens);
+        List<Stmt> statements = parser.parse();
+        if (parser.hadError) System.exit(65);       // ...or one that failed to parse
+ 
+        Interpreter interpreter = new Interpreter();
+        interpreter.interpret(statements);
+        if (interpreter.hadRuntimeError) System.exit(70);
     }
 }

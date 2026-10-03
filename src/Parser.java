@@ -15,13 +15,61 @@ class Parser {
     }
 
 
-    Expr parseExpression() {
-        try {
-            return expression();
-        } catch (ParseError e) {
-            return null;
+    // Expr parseExpression() {
+    //     try {
+    //         return expression();
+    //     } catch (ParseError e) {
+    //         return null;
+    //     }
+    // }
+
+
+    // Statements
+
+    // program to statements* EOF
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!isAtEnd) {
+            try {
+                statements.add(statements());
+            } catch (ParseError e) {
+                synchronize();
+            }
+        }
+        return statements;
+    }
+
+
+    // statement to flexStatement (spawn, assignment, alpha... get added later)
+    private Stmt statements() {
+        if (match(TokenType.FLEX)) return flexStatement();
+        throw error(peek(), "Expect statement."); 
+    }
+
+    // flexStatement to "flex" "(" expression ")"
+    private Stmt flexStatement() {
+        consume(TokenType.LPAREN, "Except '(' after 'flex'. ");
+        Expr value = expression();
+        consume(TokenType.RPAREN, "Expect ')' after value.");
+        return new Stmt.Flex(value);
+    }
+
+    // After an error: throw away tokens until one that can start a statement.
+    private void synchronize() {
+        advance(); // always move forward at least one token, or we could loop forever
+        while (!isAtEnd) {
+            switch (peek().type) {
+                case SPAWN: case FLEX:
+                case ALPHA: case GRIND: case YAP: case VIBE_CHECK:
+                case SELLING: case BOUNCE:
+                    return;
+                    default:
+                        advance();
+            }
         }
     }
+
+
 
     // grammar rules. start from loosest operator 
 
