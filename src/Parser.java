@@ -42,15 +42,34 @@ class Parser {
     }
 
 
-    // statement to flexStatement (spawn, assignment, alpha... get added later)
+    // statement to flexStatement (alpha... get added later)
     private Stmt statements() {
         if (match(TokenType.FLEX)) return flexStatement();
+        if (match(TokenType.SPAWN)) return spawnStatement();
+        if (match(TokenType.IDENTIFIER)) return assignmentCase();
         throw error(peek(), "Expect statement."); 
+        
+    }
+
+    //assignmentCase
+    private Stmt assignmentCase() {
+        Token name = previous();
+        consume(TokenType.EQUAL, "Expect '=' after variable name.");
+        Expr value = expression();
+        return new Stmt.Assign(name, value);
+    }
+
+    // spawn IDENTIFIER = expression
+    private Stmt spawnStatement() {
+        Token name = consume(TokenType.IDENTIFIER, "Expect variable name.");
+        consume(TokenType.EQUAL, "Expect '=' after variable name.");
+        Expr value = expression();
+        return new Stmt.Spawn(name, value);
     }
 
     // flexStatement to "flex" "(" expression ")"
     private Stmt flexStatement() {
-        consume(TokenType.LPAREN, "Except '(' after 'flex'. ");
+        consume(TokenType.LPAREN, "Expect '(' after 'flex'. ");
         Expr value = expression();
         consume(TokenType.RPAREN, "Expect ')' after value.");
         return new Stmt.Flex(value);
