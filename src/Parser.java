@@ -1,5 +1,7 @@
 // Parser
 import java.util.List;
+import java.util.ArrayList;
+
 
 class Parser {
 
@@ -15,13 +17,13 @@ class Parser {
     }
 
 
-    // Expr parseExpression() {
-    //     try {
-    //         return expression();
-    //     } catch (ParseError e) {
-    //         return null;
-    //     }
-    // }
+    Expr parseExpression() {
+        try {
+            return expression();
+        } catch (ParseError e) {
+            return null;
+        }
+    }
 
 
     // Statements
@@ -29,7 +31,7 @@ class Parser {
     // program to statements* EOF
     List<Stmt> parse() {
         List<Stmt> statements = new ArrayList<>();
-        while (!isAtEnd) {
+        while (!isAtEnd()) {
             try {
                 statements.add(statements());
             } catch (ParseError e) {
@@ -57,7 +59,7 @@ class Parser {
     // After an error: throw away tokens until one that can start a statement.
     private void synchronize() {
         advance(); // always move forward at least one token, or we could loop forever
-        while (!isAtEnd) {
+        while (!isAtEnd()) {
             switch (peek().type) {
                 case SPAWN: case FLEX:
                 case ALPHA: case GRIND: case YAP: case VIBE_CHECK:
