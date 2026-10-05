@@ -1,10 +1,2 @@
-spawn x = 10
-spawn name = "louis"
-spawn pogi = "ako"
-spawn deci = 1.5
-
-flex(x)
-flex(name)
-flex(pogi)
-flex(deci)
+flex(y)
 flex("\n")

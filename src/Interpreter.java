@@ -1,10 +1,18 @@
 //Interpreter.java  -- walks the tree and does the work
 
 import java.util.List;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
 
 class Interpreter {
 
     boolean hadRuntimeError = false;
+
+    private final Environment environment = new Environment(); //global
+
+    // created ONCE, making a new reader per rizz() call would lose buffered input
+    private final BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
 
     // run a whole program; stop at the first runtime error
     void interpret(List<Stmt> statements) {
@@ -13,6 +21,7 @@ class Interpreter {
                 execute(statement);
             }
         } catch (RuntimeError error) {
+            System.out.flush();
             System.err.println("[line " + error.token.line + "] Runtime error: " + error.getMessage());
             hadRuntimeError = true;
         }
@@ -23,11 +32,20 @@ class Interpreter {
     // statements
 
     private void execute(Stmt stmt) {
-        if (stmt instanceof Stmt.Flex e) {
-            Object value = evaluate(e.expression());
+        if (stmt instanceof Stmt.Flex s) {
+            Object value = evaluate(s.expression());
             System.out.print(stringify(value)); 
+        } else if (stmt instanceof Stmt.Spawn s) {
+            if (environment.isDefinedHere(s.name().lexeme)) {
+                throw new RuntimeError(s.name(),  "Variable '" + s.name().lexeme + "' is already declared.");
+            }
+            Object value = evaluate(s.initializer());
+            environment.define(s.name().lexeme, value);
+        } else if (stmt instanceof Stmt.Assign s) {
+            Object value = evaluate(s.value());
+            environment.assign(s.name(), value);
         } else {
-            throw new IllegalStateException("Unkown Statement:" + stmt);
+            throw new IllegalStateException("Unknown Statement:" + stmt);
         }
     }
 
@@ -41,13 +59,9 @@ class Interpreter {
         if (expr instanceof Expr.Unary e) return EvalUnary(e);
         if (expr instanceof Expr.Binary e) return EvalBinary(e);
         if (expr instanceof Expr.Logical e) return EvalLogical(e);
-        if (expr instanceof Expr.Variable e){
-            throw new RuntimeError(e.name(), "Variables are not implemented yet.");
-        };
-        if (expr instanceof Expr.Input e) {
-            throw new RuntimeError(e.keyword(), "rizz() is not implemented yet.");  
-        }
-        throw new IllegalStateException("Unkown expression" + expr);
+        if (expr instanceof Expr.Variable e) return environment.get(e.name());
+        if (expr instanceof Expr.Input e) return readLine(e.keyword());
+        throw new IllegalStateException("Unknown expression" + expr);
     }
 
     private Object EvalUnary(Expr.Unary e) {
@@ -148,6 +162,17 @@ class Interpreter {
 
 
     // helper functions
+
+    // the rizz(), read one line from the keyboard (always a string)
+    private String readLine(Token keyword) {
+        try {
+            String line = stdin.readLine();
+            if (line == null) throw new RuntimeError(keyword, "No input available for rizz().");
+            return line;
+        } catch (IOException ex) {
+            throw new RuntimeError(keyword, "Could not read input.");
+        }
+    }
 
     private boolean requireBoolean(Token op, Object value) {
         if (value instanceof Boolean b) return b;
