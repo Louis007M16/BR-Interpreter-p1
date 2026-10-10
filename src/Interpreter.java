@@ -32,10 +32,15 @@ class Interpreter {
     // statements
 
     private void execute(Stmt stmt) {
-        if (stmt instanceof Stmt.Flex s) {
-            Object value = evaluate(s.expression());
-            System.out.print(stringify(value)); 
-        } else if (stmt instanceof Stmt.Spawn s) {
+        if (stmt instanceof Stmt.Log s) {
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < s.args().size(); i++) {
+                if (i > 0) out.append(" ");
+                out.append(stringify(evaluate(s.args().get(i))));
+            }
+            System.out.println(out);
+            return;
+        } else if (stmt instanceof Stmt.Agent s) {
             if (environment.isDefinedHere(s.name().lexeme)) {
                 throw new RuntimeError(s.name(),  "Variable '" + s.name().lexeme + "' is already declared.");
             }
@@ -74,7 +79,6 @@ class Interpreter {
                 if (right instanceof Double d) return -d;
                 throw new RuntimeError(op, "Operand must be a number.");
             case NOT:
-            case BANG:
                 return !requireBoolean(op, right);
             default:
                 throw new IllegalStateException("Bad Unary operator: " + op.type);
@@ -108,7 +112,7 @@ class Interpreter {
 
         // everything else needs two numbers
         if (!(left instanceof Number) || !(right instanceof Number)) {
-            throw new RuntimeError(op, "Operands must be a Number");
+            throw new RuntimeError(op, "Operands must be a Number.");
         }
 
         // int op int stays an int, anything involving a decimal becomes a decimal
@@ -167,7 +171,7 @@ class Interpreter {
     private String readLine(Token keyword) {
         try {
             String line = stdin.readLine();
-            if (line == null) throw new RuntimeError(keyword, "No input available for rizz().");
+            if (line == null) throw new RuntimeError(keyword, "No input available for intel.in().");
             return line;
         } catch (IOException ex) {
             throw new RuntimeError(keyword, "Could not read input.");
@@ -188,7 +192,7 @@ class Interpreter {
 
     // how a value is shown by flex() and string "+"
     private String stringify(Object value) {
-        if (value instanceof Boolean b) return b ? "W" : "L";
+        if (value instanceof Boolean b) return b ? "affirmative" : "denied";
         return String.valueOf(value);
     }
 

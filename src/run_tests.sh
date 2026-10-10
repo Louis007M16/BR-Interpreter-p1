@@ -1,8 +1,8 @@
 #!/bin/bash
 # run from src:   javac *.java   then   ./run_tests.sh
 pass=0; fail=0
-for f in ../tests/*.br; do
-  base="${f%.br}"
+for f in ../tests_spyscript/*.ss; do
+  base="${f%.ss}"
   input=/dev/null
   [ -f "$base.in" ] && input="$base.in"
   actual=$(java -cp . Main "$f" < "$input" 2>&1)

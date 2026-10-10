@@ -20,26 +20,26 @@ class Lexer {
 
     static {
         keywords = new HashMap<>();
-        keywords.put("spawn", TokenType.SPAWN);
-        keywords.put("flex", TokenType.FLEX);     
-        keywords.put("rizz", TokenType.RIZZ); 
-        keywords.put("alpha", TokenType.ALPHA);
-        keywords.put("beta", TokenType.BETA);
-        keywords.put("omega", TokenType.OMEGA);
-        keywords.put("grind", TokenType.GRIND);
-        keywords.put("yap", TokenType.YAP);
-        keywords.put("in", TokenType.IN);
-        keywords.put("vibe_check", TokenType.VIBE_CHECK);
-        keywords.put("its_giving", TokenType.ITS_GIVING);
-        keywords.put("ick", TokenType.ICK);
-        keywords.put("slay", TokenType.SLAY);
-        keywords.put("selling", TokenType.SELLING);
-        keywords.put("bounce", TokenType.BOUNCE);
-        keywords.put("W", TokenType.W);
-        keywords.put("L", TokenType.L);
-        keywords.put("and", TokenType.AND);
-        keywords.put("or", TokenType.OR);
-        keywords.put("not", TokenType.NOT);
+        keywords.put("agent", TokenType.AGENT);
+        keywords.put("intel", TokenType.INTEL);     
+        keywords.put("verify", TokenType.VERIFY);
+        keywords.put("alternative", TokenType.ALTERNATIVE);
+        keywords.put("otherwise", TokenType.OTHERWISE);
+        keywords.put("infiltrate", TokenType.INFILTRATE);
+        keywords.put("penetrate", TokenType.PENETRATE);
+        keywords.put("protocol", TokenType.PROTOCOL);
+        keywords.put("rule", TokenType.RULE);
+        keywords.put("default", TokenType.DEFAULT);
+        keywords.put("abort", TokenType.ABORT);
+        keywords.put("proceed", TokenType.PROCEED);
+        keywords.put("affirmative", TokenType.AFFIRMATIVE);
+        keywords.put("denied", TokenType.DENIED);
+        keywords.put("sync", TokenType.AND);
+        keywords.put("alt", TokenType.OR);
+        keywords.put("neg", TokenType.NOT);
+        keywords.put("mission", TokenType.MISSION);
+        keywords.put("operation", TokenType.OPERATION);
+        keywords.put("extract", TokenType.EXTRACT);
     }
 
     Lexer(String source) {
@@ -61,17 +61,41 @@ class Lexer {
         char c = advance();
         switch (c) {
             // one character token
-            case '+': addToken(TokenType.PLUS); break;
-            case '-': addToken(TokenType.MINUS); break;
+            case '+': addToken(match('+') ? TokenType.PLUS_PLUS : TokenType.PLUS); break;
+            case '-':
+                if (source.startsWith(".-.", current)) {
+                    // "-.-." is a comment: skip to the end of the line
+                    while (peek() != '\n' && !isAtEnd()) advance();
+                } else if (match('-')) {
+                    addToken(TokenType.MINUS_MINUS);
+                } else {
+                    addToken(TokenType.MINUS);
+                }
+                break;
+
+            case '&':
+                if (match('&')) addToken(TokenType.AND);
+                else error(line, "Unexpected character '&'. Did you mean '&&'?");
+                break;
+
+            case '|':
+                if (match('|')) addToken(TokenType.OR);
+                else error(line, "Unexpected character '|'. Did you mean '||'?");
+                break;
             case '*': addToken(TokenType.STAR); break;
             case '%': addToken(TokenType.PERCENT); break;
             case '(': addToken(TokenType.LPAREN); break;
             case ')': addToken(TokenType.RPAREN); break;
-            case '~': addToken(TokenType.TILDE); break;
             case '/': addToken(TokenType.SLASH); break;
+            case '{': addToken(TokenType.LBRACES); break;
+            case '}': addToken(TokenType.RBRACES); break;
+            case ',': addToken(TokenType.COMMA); break;
+            case ';': addToken(TokenType.SEMI_COLON); break;
+            case ':': addToken(TokenType.COLON); break;
+            case '.': addToken(TokenType.DOT); break;
             // two caharacter token
             case '!': 
-                addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG);
+                addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.NOT);
                 break;
             case '=':
                 addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
@@ -113,17 +137,7 @@ class Lexer {
     // identifier
     private void identifier() {
         while (isAlphanumeric(peek())) advance();
-
-        // checking for npc# (our comment syntx)
         String text = source.substring(start, current);
-        if (text.equals("npc") && peek() == '#') {
-            advance();
-            while (peek() != '\n' && !isAtEnd()) {
-                advance();
-            }
-            return;
-        }
-
         //keyword type
         TokenType type = keywords.get(text);
         if (type == null) type = TokenType.IDENTIFIER;
@@ -238,7 +252,7 @@ class Lexer {
     //error
     private void error(int line, String message) {
         hadError = true;
-        System.err.println("[line " + line + "]" + message);
+        System.err.println("[line " + line + "] " + message);
     }
 
 

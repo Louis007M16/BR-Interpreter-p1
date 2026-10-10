@@ -1,6 +1,7 @@
+import java.util.List;
 
 interface Stmt {
-    record Flex(Expr expression) implements Stmt  {}
-    record Spawn(Token name, Expr initializer) implements Stmt {}
+    record Agent(Token name, Expr initializer) implements Stmt {}
     record Assign(Token name, Expr value) implements Stmt {}
+    record Log(Token keyword, List<Expr> args) implements Stmt {}
 } 

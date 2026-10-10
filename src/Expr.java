@@ -8,5 +8,5 @@ interface Expr {
     record Unary(Token operator, Expr right) implements Expr {}           // -x, not x
     record Binary(Expr left, Token operator, Expr right) implements Expr {}   // + - * / % == != < <= > >=
     record Logical(Expr left, Token operator, Expr right) implements Expr {}  // and, or (short-circuit)
-    record Input(Token keyword) implements Expr {}                        // rizz()
+    record Input(Token keyword) implements Expr {}                     
 }

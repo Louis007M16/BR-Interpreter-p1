@@ -1,70 +1,85 @@
 # BR-Interpreter-p1
-Making an interpreter using java programming language, that will execute basic programming language basic operations, variable declaration and  if-else statement(No functions or Class yet). This project is a programming language school project(Requirements are based on school project).
+Making an interpreter using java programming language, that will execute basic programming language basic operations, variable declaration and  if-else statement, functions(No Class yet). This project is a programming language school project(Requirements are based on school project).
 # Syntax and Features
 # Comments
 ```br
-npc# This is a comment.
+-.-. This is a comment.
 ```
 # Variable
 ```br
-spawn number = 10
-spawn bool = W   npc# W= True L=False
-spawn string = "Hello"
+agent number = 10
+agent bool = confirmed   npc# affirmative= True denied=False
+agent string = "Hello"
 ```
 # Input & Output
-**flex()**
+**intel.log()**
 ```br
-flex("Hello World!\n")  npc# Outputs `Hello World!` to the console
+intel.log("Hello World!\n")  -.-. Outputs `Hello World!` to the console
 ```
-**rizz()**
+**intel.in()**
 ```br
-spawn input = rizz()  npc# Parses input from user as a string
+agent input = intel.in()  -.-. Parses input from user as a string
 ```
 **If-else Statements**
 ```br
-alpha condition
-  npc# body
-omega
-  npc# body
-slay
+verify (condition) {
+  -.-. body
+} otherwise {
+  -.-. body
+}
+
 ```
 **Else if Statements**
 ```br
-alpha condition
-  npc# body
-beta condition
-  npc# body
-omega
-  npc# body
-slay
+verify (condition) {
+  -.-. body
+} alternative (condition) {
+  -.-. body
+} otherwise {
+  -.-. body
+}
 ```
 # Looping
 **While loop**
 ```br
-grind condition
-  npc# body
-slay
+infiltrate (condition) {
+  -.-. body
+}
 ```
 **For loop**
 ```br
-yap NAME in start~end
-  npc# body
-slay
+penetrate (agent i = 1; i < 10; i++) {
+  -.-. body
+}
 ```
 # Switch
 ```br
-vibe_check expr
-  its_giving value
-    npc# body
-  ick
-    npc# body
-slay
+protocol (expr) {
+  rule 1:
+    -.-. body
+  default:
+    -.-. body
+}
 ```
 # Break / Continue
 ```br
-selling     npc# break
+abort     -.-. break
 ```
 ```br
-bounce      npc# continue
+proceed   -.-. continue
 ```
 
+# Function
+**Declaration**
+```br
+operation name(args) {
+  -.-. body
+}
+```
+**Function Call**
+```br
+name(args);
+```
+```br
+extract   -.-. return
+```

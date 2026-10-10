@@ -42,13 +42,35 @@ class Parser {
     }
 
 
-    // statement to flexStatement (alpha... get added later)
+    // statement to Statement (alpha... get added later)
     private Stmt statements() {
-        if (match(TokenType.FLEX)) return flexStatement();
-        if (match(TokenType.SPAWN)) return spawnStatement();
+        if (match(TokenType.INTEL)) return intelStatement();
+        if (match(TokenType.AGENT)) return agentStatement();
         if (match(TokenType.IDENTIFIER)) return assignmentCase();
         throw error(peek(), "Expect statement."); 
         
+    } 
+
+    // intel . log ( args ) ;
+    private Stmt intelStatement() {
+        Token keyword = previous();
+        consume(TokenType.DOT, "Expect '.' after 'intel'.");
+        Token name = consume(TokenType.IDENTIFIER, "Expect function name after 'intel.'.");
+
+        if (!name.lexeme.equals("log")) {
+            throw error(name, "'intel." + name.lexeme + "' can't be used as a statement.");
+        }
+
+        consume(TokenType.LPAREN, "Expect '(' after 'intel.log'.");
+        List<Expr> args = new ArrayList<>();
+        if (!check(TokenType.RPAREN)) {
+            do {
+                args.add(expression());
+            } while (match(TokenType.COMMA));
+        }
+        consume(TokenType.RPAREN, "Expect ')' after arguments.");
+        consume(TokenType.SEMI_COLON, "Expect ';' after 'intel.log(...)'.");
+        return new Stmt.Log(keyword, args);
     }
 
     //assignmentCase
@@ -56,23 +78,17 @@ class Parser {
         Token name = previous();
         consume(TokenType.EQUAL, "Expect '=' after variable name.");
         Expr value = expression();
+        consume(TokenType.SEMI_COLON, "Expect ';' after assignment.");
         return new Stmt.Assign(name, value);
     }
 
-    // spawn IDENTIFIER = expression
-    private Stmt spawnStatement() {
+    // agent IDENTIFIER = expression
+    private Stmt agentStatement() {
         Token name = consume(TokenType.IDENTIFIER, "Expect variable name.");
         consume(TokenType.EQUAL, "Expect '=' after variable name.");
         Expr value = expression();
-        return new Stmt.Spawn(name, value);
-    }
-
-    // flexStatement to "flex" "(" expression ")"
-    private Stmt flexStatement() {
-        consume(TokenType.LPAREN, "Expect '(' after 'flex'. ");
-        Expr value = expression();
-        consume(TokenType.RPAREN, "Expect ')' after value.");
-        return new Stmt.Flex(value);
+        consume(TokenType.SEMI_COLON, "Expect ';' after variable declaration.");
+        return new Stmt.Agent(name, value);
     }
 
     // After an error: throw away tokens until one that can start a statement.
@@ -80,9 +96,9 @@ class Parser {
         advance(); // always move forward at least one token, or we could loop forever
         while (!isAtEnd()) {
             switch (peek().type) {
-                case SPAWN: case FLEX:
-                case ALPHA: case GRIND: case YAP: case VIBE_CHECK:
-                case SELLING: case BOUNCE:
+                case AGENT: case INTEL:
+                case VERIFY: case INFILTRATE: case PENETRATE: case PROTOCOL:
+                case ABORT: case PROCEED: case EXTRACT: case OPERATION: case MISSION:
                     return;
                     default:
                         advance();
@@ -123,7 +139,7 @@ class Parser {
 
     //logicNot to "not" | !, the word | and for equal
     private Expr logicNot() {
-        if (match(TokenType.NOT, TokenType.BANG)) {
+        if (match(TokenType.NOT)) {
             Token operator = previous();
             Expr right = logicNot();
             return new Expr.Unary(operator, right);
@@ -186,10 +202,10 @@ class Parser {
         return primary();
     }
 
-    // Primary to NUMBER | STRING | W | L | IDENTIFIER | "rizz" "(" ")" | "(" expression ")
+    // Primary to NUMBER | STRING | true | false | IDENTIFIER | "intel" "(" ")" | "(" expression ")
     private Expr primary() {
-        if (match(TokenType.W)) return new Expr.Literal(true);
-        if (match(TokenType.L)) return new Expr.Literal(false);
+        if (match(TokenType.AFFIRMATIVE)) return new Expr.Literal(true);
+        if (match(TokenType.DENIED)) return new Expr.Literal(false);
 
         if (match(TokenType.NUMBER, TokenType.STRING)) {
             return new Expr.Literal(previous().literal);
@@ -199,17 +215,26 @@ class Parser {
             return new Expr.Variable(previous());
         }
 
-        if (match(TokenType.RIZZ)) {
-            Token keyword = previous();
-            consume(TokenType.LPAREN, "Expect '(' after 'rizz'.");
-            consume(TokenType.RPAREN, "Expect ')' after 'rizz('.");
-            return new Expr.Input(keyword);
-        }
-
         if (match(TokenType.LPAREN)) {
             Expr expr = expression();
             consume(TokenType.RPAREN, "Expect ')' after expression.");
             return new Expr.Grouping(expr);
+        }
+
+        if (match(TokenType.INTEL)) {
+            Token keyword = previous();
+            consume(TokenType.DOT, "Expect '.' after 'intel'.");
+            Token name = consume(TokenType.IDENTIFIER, "Expect function name after 'intel.'.");
+
+            if (name.lexeme.equals("in")) {
+                consume(TokenType.LPAREN, "Expect '(' after 'intel.in'.");
+                consume(TokenType.RPAREN, "Expect ')' after 'intel.in('.");
+                return new Expr.Input(keyword);
+            }
+            if (name.lexeme.equals("log")) {
+                throw error(name, "'intel.log' is a statement and has no value.");
+            }
+            throw error(name, "Unknown intel function '" + name.lexeme + "'.");
         }
 
         throw error(peek(), "Expect expression.");
