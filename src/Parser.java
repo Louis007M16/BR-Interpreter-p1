@@ -47,8 +47,9 @@ class Parser {
         if (match(TokenType.INTEL)) return intelStatement();
         if (match(TokenType.AGENT)) return agentStatement();
         if (match(TokenType.IDENTIFIER)) return assignmentCase();
-        throw error(peek(), "Expect statement."); 
-        
+        if (match(TokenType.VERIFY)) return verifyStatement();
+        if (match(TokenType.LBRACES)) return blockStatement();
+        throw error(peek(), "Expect statement.");  
     } 
 
     // intel . log ( args ) ;
@@ -95,10 +96,12 @@ class Parser {
     private void synchronize() {
         advance(); // always move forward at least one token, or we could loop forever
         while (!isAtEnd()) {
+            if (previous().type == TokenType.SEMI_COLON) return;
             switch (peek().type) {
                 case AGENT: case INTEL:
                 case VERIFY: case INFILTRATE: case PENETRATE: case PROTOCOL:
                 case ABORT: case PROCEED: case EXTRACT: case OPERATION: case MISSION:
+                case RBRACES:
                     return;
                     default:
                         advance();
@@ -240,6 +243,44 @@ class Parser {
         throw error(peek(), "Expect expression.");
     }
 
+
+    // if statements
+    
+    private Stmt blockStatement() {
+        List<Stmt> forBstatements = new ArrayList<>();
+        while (!check(TokenType.RBRACES) && !isAtEnd()) {
+            try {
+                forBstatements.add(statements());
+            } catch (ParseError e) {
+                synchronize();
+            }
+        }
+        consume(TokenType.RBRACES, "Expect '}' after block.");
+        return new Stmt.Block(forBstatements);
+    } 
+
+    private Stmt verifyStatement() {
+        Token keyword = previous();
+        consume(TokenType.LPAREN, "Expect '(' after 'verify'.");
+        Expr condition = expression();
+        consume(TokenType.RPAREN, "Expect ')' after condition.");
+
+        Stmt thenBranch = body();
+        Stmt elseBranch = null;
+
+        if (match(TokenType.ALTERNATIVE)) {
+            elseBranch = verifyStatement();
+        } else if (match(TokenType.OTHERWISE)) {
+            elseBranch = body();
+        }
+
+        return new Stmt.Verify(keyword, condition, thenBranch, elseBranch);
+    }
+
+    private Stmt body() { // for one line if 
+        if (check(TokenType.AGENT)) throw error(peek(), "Declaration needs a block.");
+        return statements();
+    }
 
     // helper functions
 

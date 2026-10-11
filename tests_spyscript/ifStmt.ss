@@ -1,0 +1,1 @@
+verify (confirmed) { intel.log("a"); }

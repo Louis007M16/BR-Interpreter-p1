@@ -9,9 +9,9 @@ class Interpreter {
 
     boolean hadRuntimeError = false;
 
-    private final Environment environment = new Environment(); //global
+    private Environment environment = new Environment(); //global
 
-    // created ONCE, making a new reader per rizz() call would lose buffered input
+    // created ONCE, making a new reader per intel.in() call would lose buffered input
     private final BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
 
     // run a whole program; stop at the first runtime error
@@ -49,7 +49,7 @@ class Interpreter {
         } else if (stmt instanceof Stmt.Assign s) {
             Object value = evaluate(s.value());
             environment.assign(s.name(), value);
-        } else {
+        }  else {
             throw new IllegalStateException("Unknown Statement:" + stmt);
         }
     }
@@ -167,7 +167,7 @@ class Interpreter {
 
     // helper functions
 
-    // the rizz(), read one line from the keyboard (always a string)
+    // the intel.in(), read one line from the keyboard (always a string)
     private String readLine(Token keyword) {
         try {
             String line = stdin.readLine();
@@ -190,7 +190,7 @@ class Interpreter {
         return a.equals(b); // different types is false
     }
 
-    // how a value is shown by flex() and string "+"
+    // how a value is shown by intel.out() and string "+"
     private String stringify(Object value) {
         if (value instanceof Boolean b) return b ? "affirmative" : "denied";
         return String.valueOf(value);
