@@ -260,20 +260,34 @@ class Parser {
     } 
 
     private Stmt verifyStatement() {
-        Token keyword = previous();
-        consume(TokenType.LPAREN, "Expect '(' after 'verify'.");
+        return verifyChain(true);
+    }
+
+    private Stmt verifyChain(boolean first) {
+        Token keyword = previous();             // 'verify' or 'alternative'
+        consume(TokenType.LPAREN, "Expect '(' after '" + (first ? "verify" : "alternative") + "'.");
         Expr condition = expression();
         consume(TokenType.RPAREN, "Expect ')' after condition.");
 
-        Stmt thenBranch = body();
-        Stmt elseBranch = null;
-
-        if (match(TokenType.ALTERNATIVE)) {
-            elseBranch = verifyStatement();
-        } else if (match(TokenType.OTHERWISE)) {
-            elseBranch = body();
+        boolean braced = check(TokenType.LBRACES);
+        if (!first && !braced) {
+            throw error(peek(), "Expect '{' before alternative body.");
         }
+        Stmt thenBranch = body();
 
+        Stmt elseBranch = null;
+        if (check(TokenType.ALTERNATIVE) || check(TokenType.OTHERWISE)) {
+            if (!braced) {
+                throw error(peek(), "Use braces when 'verify' has 'alternative' or 'otherwise'.");
+            }
+            if (match(TokenType.ALTERNATIVE)) {
+                elseBranch = verifyChain(false);
+            } else {
+                advance();                      // the 'otherwise'
+                consume(TokenType.LBRACES, "Expect '{' before otherwise body.");
+                elseBranch = blockStatement();
+            }
+        }
         return new Stmt.Verify(keyword, condition, thenBranch, elseBranch);
     }
 

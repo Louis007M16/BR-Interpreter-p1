@@ -46,10 +46,26 @@ class Interpreter {
             }
             Object value = evaluate(s.initializer());
             environment.define(s.name().lexeme, value);
+
         } else if (stmt instanceof Stmt.Assign s) {
             Object value = evaluate(s.value());
             environment.assign(s.name(), value);
-        }  else {
+
+        } else if (stmt instanceof Stmt.Block s) {
+            executeBlock(s.statements(), new Environment(environment));
+
+        } else if (stmt instanceof Stmt.Verify s) {
+            Object condition = evaluate(s.condition());
+            if (!(condition instanceof Boolean)) {
+                throw new RuntimeError(s.keyword(), "Condition must be a boolean.");
+            }
+
+            if ((Boolean) condition) {
+                execute(s.thenBranch());
+            } else if (s.elseBranch() != null) {
+                execute(s.elseBranch());
+            }
+        } else {
             throw new IllegalStateException("Unknown Statement:" + stmt);
         }
     }
@@ -166,6 +182,20 @@ class Interpreter {
 
 
     // helper functions
+
+    // execution block
+    private void executeBlock (List<Stmt> statements, Environment scope) {
+        Environment previous = this.environment;
+
+        try {
+            this.environment = scope;
+            for (Stmt statement : statements) {
+                execute(statement);
+            } 
+        } finally {
+            this.environment = previous;
+        }
+    }
 
     // the intel.in(), read one line from the keyboard (always a string)
     private String readLine(Token keyword) {
