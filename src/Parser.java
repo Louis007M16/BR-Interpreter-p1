@@ -11,6 +11,8 @@ class Parser {
     private int current = 0;
     boolean hadError = false;
 
+    private int loopDepth = 0;
+
 
     Parser(List<Token> tokens) {
         this.tokens = tokens;
@@ -49,6 +51,10 @@ class Parser {
         if (match(TokenType.IDENTIFIER)) return assignmentCase();
         if (match(TokenType.VERIFY)) return verifyStatement();
         if (match(TokenType.LBRACES)) return blockStatement();
+        if (match(TokenType.INFILTRATE)) return infiltrateStatement();
+        if (match(TokenType.PENETRATE)) return penetrateStatement();
+        if (match(TokenType.ABORT)) return abortStatement();
+        if (match(TokenType.PROCEED)) return proceedStatement();
         throw error(peek(), "Expect statement.");  
     } 
 
@@ -76,10 +82,24 @@ class Parser {
 
     //assignmentCase
     private Stmt assignmentCase() {
+        Stmt stmt = assignmentCore();
+        consume(TokenType.SEMI_COLON, "Expect ';' after assignment.");
+        return stmt;
+    }
+
+    private Stmt.Assign assignmentCore() {
         Token name = previous();
+
+        if(match(TokenType.PLUS_PLUS, TokenType.MINUS_MINUS)) {
+            Token op = previous();
+            TokenType kind = (op.type == TokenType.PLUS_PLUS) ? TokenType.PLUS : TokenType.MINUS;
+            Token arithmetic = new Token(kind, op.lexeme.substring(0, 1), null, op.line);
+            Expr value = new Expr.Binary(new Expr.Variable(name), arithmetic, new Expr.Literal(1));
+            return new Stmt.Assign(name, value);
+        }
+
         consume(TokenType.EQUAL, "Expect '=' after variable name.");
         Expr value = expression();
-        consume(TokenType.SEMI_COLON, "Expect ';' after assignment.");
         return new Stmt.Assign(name, value);
     }
 
@@ -295,6 +315,76 @@ class Parser {
         if (check(TokenType.AGENT)) throw error(peek(), "Declaration needs a block.");
         return statements();
     }
+
+
+    // loops
+
+    // infiltrate (condition) body
+    private Stmt infiltrateStatement() {
+        Token keyword = previous();
+        consume(TokenType.LPAREN, "Expect '(' after 'infiltrate'.");
+        Expr condition = expression();
+        consume(TokenType.RPAREN, "Expect ')' after condition.");
+        Stmt body = loopBody();
+        return new Stmt.While(keyword, condition, body);
+    }
+
+    // penetrate ( initializer ; condition ; increment ) body    (each part may be empty)
+    private Stmt penetrateStatement() {
+        Token keyword = previous();
+        consume(TokenType.LPAREN, "Expect '(' after 'penetrate'.");
+ 
+        Stmt initializer;
+        if (match(TokenType.SEMI_COLON)) {
+            initializer = null;                          // empty
+        } else if (match(TokenType.AGENT)) {
+            initializer = agentStatement();              // eats its own ';'
+        } else if (match(TokenType.IDENTIFIER)) {
+            initializer = assignmentCase();              // eats its own ';'
+        } else {
+            throw error(peek(), "Expect loop initializer.");
+        }
+ 
+        Expr condition = null;
+        if (!check(TokenType.SEMI_COLON)) condition = expression();
+        consume(TokenType.SEMI_COLON, "Expect ';' after loop condition.");
+ 
+        Stmt increment = null;
+        if (!check(TokenType.RPAREN)) {
+            consume(TokenType.IDENTIFIER, "Expect variable name in the loop increment.");
+            increment = assignmentCore();                // no ';' here, the header ends with ')'
+        }
+        consume(TokenType.RPAREN, "Expect ')' after for clauses.");
+ 
+        Stmt body = loopBody();
+        return new Stmt.For(keyword, initializer, condition, increment, body);
+    }
+
+    // a loop body: counts as "inside a loop" while it is being parsed
+    private Stmt loopBody() {
+        loopDepth++;
+        try {
+            return body();
+        } finally {
+            loopDepth--;        // restored even if the body throws a ParseError
+        }
+    }
+
+    private Stmt abortStatement() {
+        Token keyword = previous();
+        if (loopDepth == 0) throw error(keyword, "'abort' can only be used inside a loop.");
+        consume(TokenType.SEMI_COLON, "Expect ';' after 'abort'.");
+        return new Stmt.Abort(keyword);
+    }
+ 
+    private Stmt proceedStatement() {
+        Token keyword = previous();
+        if (loopDepth == 0) throw error(keyword, "'proceed' can only be used inside a loop.");
+        consume(TokenType.SEMI_COLON, "Expect ';' after 'proceed'.");
+        return new Stmt.Proceed(keyword);
+    }
+
+
 
     // helper functions
 

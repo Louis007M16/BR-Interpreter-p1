@@ -1,7 +1,7 @@
 #!/bin/bash
 # run from src:   javac *.java   then   ./run_tests.sh
 pass=0; fail=0
-for f in ../tests_spyscript/*.ss; do
+for f in ../tests/*.ss; do
   base="${f%.ss}"
   input=/dev/null
   [ -f "$base.in" ] && input="$base.in"

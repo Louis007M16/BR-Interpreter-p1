@@ -65,6 +65,49 @@ class Interpreter {
             } else if (s.elseBranch() != null) {
                 execute(s.elseBranch());
             }
+
+        } else if (stmt instanceof Stmt.Abort s){
+            throw new BreakSignal();
+
+        } else if (stmt instanceof Stmt.Proceed s){
+            throw new ContinueSignal();
+
+        } else if (stmt instanceof Stmt.While s) {
+            try {
+                while (conditionTruth(s.keyword(), evaluate(s.condition()))) {
+                    try {
+                        execute(s.body());
+                    } catch (ContinueSignal c) {
+                        // proceed: just start the next pass
+                    }
+                }
+            } catch (BreakSignal b) {
+                // abort: leave the loop
+            }
+ 
+        } else if (stmt instanceof Stmt.For s) {
+            Environment previous = this.environment;
+            try {
+                this.environment = new Environment(previous);       // the loop variable lives in here
+                if (s.initializer() != null) execute(s.initializer());
+ 
+                try {
+                    // a missing condition means "always true"
+                    while (s.condition() == null || conditionTruth(s.keyword(), evaluate(s.condition()))) {
+                        try {
+                            execute(s.body());
+                        } catch (ContinueSignal c) {
+                            // proceed: skip the rest of the body, but STILL run the increment
+                        }
+                        if (s.increment() != null) execute(s.increment());
+                    }
+                } catch (BreakSignal b) {
+                    // abort: leave the loop
+                }
+            } finally {
+                this.environment = previous;                        // loop scope disappears
+            }
+
         } else {
             throw new IllegalStateException("Unknown Statement:" + stmt);
         }
@@ -195,6 +238,12 @@ class Interpreter {
         } finally {
             this.environment = previous;
         }
+    }
+
+    // a loop condition must be a boolean
+    private boolean conditionTruth(Token keyword, Object value) {
+        if (value instanceof Boolean b) return b;
+        throw new RuntimeError(keyword, "Condition must be a boolean.");
     }
 
     // the intel.in(), read one line from the keyboard (always a string)
