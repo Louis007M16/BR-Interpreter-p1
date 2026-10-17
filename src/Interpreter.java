@@ -107,6 +107,47 @@ class Interpreter {
             } finally {
                 this.environment = previous;                        // loop scope disappears
             }
+        } else if (stmt instanceof Stmt.Protocol s) {
+            Object subject = evaluate(s.subject());                 // evaluated once
+            List<Stmt.Section> sections = s.sections();
+ 
+            // 1. where do we start? the first rule that matches...
+            int start = -1;
+            for (int n = 0; n < sections.size(); n++) {
+                Stmt.Section section = sections.get(n);
+                if (!section.isDefault() && isEqual(subject, section.value())) {
+                    start = n;
+                    break;
+                }
+            }
+            // ...or, if none matches, the default (if there is one)
+            if (start == -1) {
+                for (int n = 0; n < sections.size(); n++) {
+                    if (sections.get(n).isDefault()) {
+                        start = n;
+                        break;
+                    }
+                }
+            }
+ 
+            // 2. run from there. Without an abort it FALLS THROUGH into the next sections (like Java/C++)
+            Environment previous = this.environment;
+            try {
+                this.environment = new Environment(previous);       // the whole protocol is one scope
+                if (start != -1) {
+                    try {
+                        for (int n = start; n < sections.size(); n++) {
+                            for (Stmt inner : sections.get(n).body()) {
+                                execute(inner);
+                            }
+                        }
+                    } catch (BreakSignal b) {
+                        // abort: leave the protocol
+                    }
+                }
+            } finally {
+                this.environment = previous;
+            }
 
         } else {
             throw new IllegalStateException("Unknown Statement:" + stmt);

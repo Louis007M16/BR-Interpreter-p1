@@ -12,6 +12,7 @@ class Parser {
     boolean hadError = false;
 
     private int loopDepth = 0;
+    private int switchDepth = 0;
 
 
     Parser(List<Token> tokens) {
@@ -55,6 +56,7 @@ class Parser {
         if (match(TokenType.PENETRATE)) return penetrateStatement();
         if (match(TokenType.ABORT)) return abortStatement();
         if (match(TokenType.PROCEED)) return proceedStatement();
+        if (match(TokenType.PROTOCOL)) return protocolStatement();
         throw error(peek(), "Expect statement.");  
     } 
 
@@ -122,6 +124,7 @@ class Parser {
                 case VERIFY: case INFILTRATE: case PENETRATE: case PROTOCOL:
                 case ABORT: case PROCEED: case EXTRACT: case OPERATION: case MISSION:
                 case RBRACES:
+                case RULE: case DEFAULT:
                     return;
                     default:
                         advance();
@@ -372,7 +375,8 @@ class Parser {
 
     private Stmt abortStatement() {
         Token keyword = previous();
-        if (loopDepth == 0) throw error(keyword, "'abort' can only be used inside a loop.");
+        if (loopDepth == 0 && switchDepth == 0) 
+        throw error(keyword, "'abort' can only be used inside a loop.");
         consume(TokenType.SEMI_COLON, "Expect ';' after 'abort'.");
         return new Stmt.Abort(keyword);
     }
@@ -384,6 +388,96 @@ class Parser {
         return new Stmt.Proceed(keyword);
     }
 
+
+    // Protocol / rule / default
+
+    // protocol ( expression ) { ( rule literal : statements | default : statements )* }
+    private Stmt protocolStatement() {
+        Token keyword = previous();
+        consume(TokenType.LPAREN, "Expect '(' after 'protocol'.");
+        Expr subject = expression();
+        consume(TokenType.RPAREN, "Expect ')' after protocol value.");
+        consume(TokenType.LBRACES, "Expect '{' before protocol body.");
+ 
+        List<Stmt.Section> sections = new ArrayList<>();
+        List<Object> seen = new ArrayList<>();      // rule values already used, to catch duplicates
+        boolean sawDefault = false;
+ 
+        switchDepth++;
+        try {
+            while (!check(TokenType.RBRACES) && !isAtEnd()) {
+                Token label = peek();
+                try {
+                    if (match(TokenType.RULE)) {
+                        Object value = ruleValue();
+                        consume(TokenType.COLON, "Expect ':' after rule value.");
+ 
+                        // reported but not thrown, so parsing carries on and one mistake = one message
+                        if (sawDefault) error(label, "'default' must be the last label in a protocol.");
+                        Object key = value;
+                        if (value instanceof Number num) key = num.doubleValue();   // 1 and 1.0 are the same rule
+                        if (seen.contains(key)) error(label, "Duplicate rule value.");
+                        seen.add(key);
+ 
+                        sections.add(new Stmt.Section(label, value, false, sectionBody()));
+ 
+                    } else if (match(TokenType.DEFAULT)) {
+                        consume(TokenType.COLON, "Expect ':' after 'default'.");
+                        if (sawDefault) error(label, "Only one 'default' is allowed in a protocol.");
+                        sawDefault = true;
+                        sections.add(new Stmt.Section(label, null, true, sectionBody()));
+ 
+                    } else {
+                        // statements before the first label: report it, then read and drop them
+                        error(peek(), "Expect 'rule' or 'default' inside a protocol.");
+                        sectionBody();
+                    }
+                } catch (ParseError e) {
+                    // a broken label: skip to the next label or the closing brace
+                    while (!isAtEnd() && !check(TokenType.RULE)
+                            && !check(TokenType.DEFAULT) && !check(TokenType.RBRACES)) {
+                        advance();
+                    }
+                }
+            }
+        } finally {
+            switchDepth--;
+        }
+ 
+        consume(TokenType.RBRACES, "Expect '}' after protocol body.");
+        return new Stmt.Protocol(keyword, subject, sections);
+    }
+ 
+    // the value after "rule": a literal only (number, negative number, string, affirmative, denied)
+    private Object ruleValue() {
+        if (match(TokenType.AFFIRMATIVE)) return true;
+        if (match(TokenType.DENIED)) return false;
+        if (match(TokenType.STRING)) return previous().literal;
+ 
+        boolean negative = match(TokenType.MINUS);
+        if (match(TokenType.NUMBER)) {
+            Object number = previous().literal;
+            if (!negative) return number;
+            if (number instanceof Integer i) return -i;
+            return -(Double) number;
+        }
+        throw error(peek(), "Expect a literal value after 'rule'.");
+    }
+ 
+    // statements after a label, up to the next rule / default / closing brace.
+    // One scope covers the whole protocol, so 'agent' is allowed here (not a one-line body).
+    private List<Stmt> sectionBody() {
+        List<Stmt> body = new ArrayList<>();
+        while (!check(TokenType.RULE) && !check(TokenType.DEFAULT)
+                && !check(TokenType.RBRACES) && !isAtEnd()) {
+            try {
+                body.add(statements());
+            } catch (ParseError e) {
+                synchronize();
+            }
+        }
+        return body;
+    }
 
 
     // helper functions

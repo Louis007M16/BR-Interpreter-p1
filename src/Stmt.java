@@ -10,4 +10,6 @@ interface Stmt {
     record For(Token keyword, Stmt initializer, Expr condition, Stmt increment, Stmt body) implements Stmt {}
     record Abort(Token keyword) implements Stmt {}
     record Proceed(Token keyword) implements Stmt {}
+    record Section(Token keyword, Object value, boolean isDefault, List<Stmt> body) {}
+    record Protocol(Token keyword, Expr subject, List<Section> sections) implements Stmt {}
 } 
