@@ -91,14 +91,14 @@ name(args);
 ```br
 extract   -.-. return
 ```
-# Example Programm:
+# Example Program:
 ```br
 operation greetAgent(name) {
     intel.log("Welcome, Agent " + name + "!\n")
     extract
 }
 
-mission() { -.-.
+mission() { -.-. main function
   -.-. ===================================
   -.-. SpyScript - Agent Registration
   -.-. ===================================
