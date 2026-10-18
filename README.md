@@ -1,4 +1,4 @@
-# BR-Interpreter-p1
+# SpyScript-Interpreter
 Making an interpreter using java programming language, that will execute basic programming language basic operations, variable declaration and  if-else statement, functions(No Class yet). This project is a programming language school project(Requirements are based on school project).
 # Syntax and Features
 # Comments
@@ -19,6 +19,8 @@ intel.log("Hello World!\n")  -.-. Outputs `Hello World!` to the console
 **intel.in()**
 ```br
 agent input = intel.in()  -.-. Parses input from user as a string
+intel.int() -.-. integer only
+intel.num() -.-. Parses integer and double input 
 ```
 **If-else Statements**
 ```br
@@ -70,6 +72,12 @@ proceed   -.-. continue
 ```
 
 # Function
+**Main Function**
+```br
+  mission() {
+    -.-. Program
+  }
+```
 **Declaration**
 ```br
 operation name(args) {
@@ -82,4 +90,67 @@ name(args);
 ```
 ```br
 extract   -.-. return
+```
+# Example Programm:
+```br
+operation greetAgent(name) {
+    intel.log("Welcome, Agent " + name + "!\n")
+    extract
+}
+
+mission() { -.-.
+  -.-. ===================================
+  -.-. SpyScript - Agent Registration
+  -.-. ===================================
+
+
+  agent string = "Shadow"
+  agent number = 3
+  agent bool = confirmed
+
+  intel.log("=== SPYSCRIPT AGENT SYSTEM ===\n")
+  intel.log("Enter your agent name: ")
+
+  agent input = intel.in()
+
+  greetAgent(input)
+
+  verify (number > 0) {
+      intel.log("Mission status: ACTIVE\n")
+  } otherwise {
+      intel.log("Mission status: INACTIVE\n")
+  }
+
+  intel.log("\nMission countdown:\n")
+
+  penetrate (agent i = 3; i > 0; i--) {
+      intel.log(i + "\n")
+  }
+
+  intel.log("Mission launched!\n")
+
+  verify (bool) {
+      intel.log("Authorization: GRANTED\n")
+  } otherwise {
+      intel.log("Authorization: DENIED\n")
+  }
+
+  intel.log("\n=== SYSTEM SHUTDOWN ===\n")
+}
+```
+**Output**
+```br
+  === SPYSCRIPT AGENT SYSTEM ===
+  Enter your agent name: Louis
+  Welcome, Agent Louis!
+  Mission status: ACTIVE
+
+  Mission countdown:
+  3
+  2
+  1
+  Mission launched!
+  Authorization: GRANTED
+
+=== SYSTEM SHUTDOWN ===
 ```

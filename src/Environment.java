@@ -1,4 +1,4 @@
-
+// Environment.java
 import java.util.Map;
 import java.util.HashMap;
 
@@ -21,7 +21,7 @@ class Environment {
         enviMap.put(name, value);
     }
 
-    //questions is the name already declared in THIS scope (not the parents)?
+    //questions, is the name already declared in THIS scope (not the parents)?
     boolean isDefinedHere(String name) {
         return enviMap.containsKey(name);
     }

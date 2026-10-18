@@ -20,18 +20,11 @@ class Parser {
     private final Set<String> operationNames = new HashSet<>();
 
 
+
     Parser(List<Token> tokens) {
         this.tokens = tokens;
     }
 
-
-    Expr parseExpression() {
-        try {
-            return expression();
-        } catch (ParseError e) {
-            return null;
-        }
-    }
 
 
     // Statements
@@ -51,12 +44,14 @@ class Parser {
         return declarations;
     }
 
+
     private Stmt topLevel() {
         if (match(TokenType.AGENT)) return agentStatement();          // a global variable
         if (match(TokenType.OPERATION)) return operationDeclaration();
         if (match(TokenType.MISSION)) return missionDeclaration();
         throw error(peek(), "Only 'agent', 'operation' and 'mission' declarations are allowed at the top level.");
     }
+
 
     // After a top-level error: skip to the next top-level keyword, but only OUTSIDE any { } pair
     private void synchronizeTopLevel() {
@@ -68,6 +63,7 @@ class Parser {
         } while (!isAtEnd() && !(depth == 0 && (check(TokenType.AGENT)
                 || check(TokenType.OPERATION) || check(TokenType.MISSION))));
     }
+
 
     // operation name ( agent a, agent b ) { body }
     private Stmt operationDeclaration() {
@@ -96,6 +92,7 @@ class Parser {
         return new Stmt.Function(name, params, body);
     }
  
+
     // mission ( ) { body }
     private Stmt missionDeclaration() {
         Token keyword = previous();
@@ -109,6 +106,7 @@ class Parser {
         return new Stmt.Mission(keyword, body);
     }
  
+
     // extract ;     extract expression ;
     private Stmt extractStatement() {
         Token keyword = previous();
@@ -118,6 +116,7 @@ class Parser {
         return new Stmt.Return(keyword, value);
     }
  
+
     // greet(1, 2);      (the name was already consumed)
     private Stmt callStatement() {
         Token name = previous();
@@ -127,6 +126,7 @@ class Parser {
         return new Stmt.Expression(call);
     }
  
+
     // the part of a call after "name(" :  arguments ")"
     private Expr finishCall(Token name) {
         List<Expr> arguments = new ArrayList<>();
@@ -140,7 +140,7 @@ class Parser {
     }
 
 
-    // statement to Statement (alpha... get added later)
+    // statement to Statement (verify... get added later)
     private Stmt statements() {
         if (match(TokenType.INTEL)) return intelStatement();
         if (match(TokenType.AGENT)) return agentStatement();
@@ -158,6 +158,7 @@ class Parser {
         if (match(TokenType.PROTOCOL)) return protocolStatement();
         throw error(peek(), "Expect statement.");  
     } 
+
 
     // intel . log ( args ) ;
     private Stmt intelStatement() {
@@ -180,6 +181,7 @@ class Parser {
         consume(TokenType.SEMI_COLON, "Expect ';' after 'intel.log(...)'.");
         return new Stmt.Log(keyword, args);
     }
+
 
     //assignmentCase
     private Stmt assignmentCase() {
@@ -212,6 +214,7 @@ class Parser {
         consume(TokenType.SEMI_COLON, "Expect ';' after variable declaration.");
         return new Stmt.Agent(name, value);
     }
+
 
     // After an error: throw away tokens until one that can start a statement.
     private void synchronize() {
@@ -352,16 +355,17 @@ class Parser {
             Token keyword = previous();
             consume(TokenType.DOT, "Expect '.' after 'intel'.");
             Token name = consume(TokenType.IDENTIFIER, "Expect function name after 'intel.'.");
+            String kind = name.lexeme;
 
-            if (name.lexeme.equals("in")) {
+            if (kind.equals("in") || kind.equals("int") || kind.equals("num")) {
                 consume(TokenType.LPAREN, "Expect '(' after 'intel.in'.");
                 consume(TokenType.RPAREN, "Expect ')' after 'intel.in('.");
-                return new Expr.Input(keyword);
+                return new Expr.Input(keyword, kind);
             }
-            if (name.lexeme.equals("log")) {
+            if (kind.equals("log")) {
                 throw error(name, "'intel.log' is a statement and has no value.");
             }
-            throw error(name, "Unknown intel function '" + name.lexeme + "'.");
+            throw error(name, "Unknown intel function '" + kind + "'.");
         }
 
         throw error(peek(), "Expect expression.");
@@ -383,9 +387,11 @@ class Parser {
         return new Stmt.Block(forBstatements);
     } 
 
+
     private Stmt verifyStatement() {
         return verifyChain(true);
     }
+
 
     private Stmt verifyChain(boolean first) {
         Token keyword = previous();             // 'verify' or 'alternative'
@@ -415,6 +421,7 @@ class Parser {
         return new Stmt.Verify(keyword, condition, thenBranch, elseBranch);
     }
 
+
     private Stmt body() { // for one line if 
         if (check(TokenType.AGENT)) throw error(peek(), "Declaration needs a block.");
         return statements();
@@ -432,6 +439,7 @@ class Parser {
         Stmt body = loopBody();
         return new Stmt.While(keyword, condition, body);
     }
+
 
     // penetrate ( initializer ; condition ; increment ) body    (each part may be empty)
     private Stmt penetrateStatement() {
@@ -464,6 +472,7 @@ class Parser {
         return new Stmt.For(keyword, initializer, condition, increment, body);
     }
 
+
     // a loop body: counts as "inside a loop" while it is being parsed
     private Stmt loopBody() {
         loopDepth++;
@@ -474,6 +483,7 @@ class Parser {
         }
     }
 
+
     private Stmt abortStatement() {
         Token keyword = previous();
         if (loopDepth == 0 && switchDepth == 0) 
@@ -482,6 +492,7 @@ class Parser {
         return new Stmt.Abort(keyword);
     }
  
+
     private Stmt proceedStatement() {
         Token keyword = previous();
         if (loopDepth == 0) throw error(keyword, "'proceed' can only be used inside a loop.");
@@ -549,6 +560,7 @@ class Parser {
         return new Stmt.Protocol(keyword, subject, sections);
     }
  
+
     // the value after "rule": a literal only (number, negative number, string, affirmative, denied)
     private Object ruleValue() {
         if (match(TokenType.AFFIRMATIVE)) return true;
@@ -564,6 +576,7 @@ class Parser {
         }
         throw error(peek(), "Expect a literal value after 'rule'.");
     }
+ 
  
     // statements after a label, up to the next rule / default / closing brace.
     // One scope covers the whole protocol, so 'agent' is allowed here (not a one-line body).

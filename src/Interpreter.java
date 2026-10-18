@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Map;
 
+
 class Interpreter {
 
     boolean hadRuntimeError = false;
@@ -21,6 +22,10 @@ class Interpreter {
 
     // created ONCE, making a new reader per intel.in() call would lose buffered input
     private final BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
+
+
+
+
 
     // run a whole program; stop at the first runtime error
     //  1. register every operation (so one may be called before it is written in the file)
@@ -63,32 +68,25 @@ class Interpreter {
             }
             Object value = evaluate(s.initializer());
             environment.define(s.name().lexeme, value);
-
         } else if (stmt instanceof Stmt.Assign s) {
             Object value = evaluate(s.value());
             environment.assign(s.name(), value);
-
         } else if (stmt instanceof Stmt.Block s) {
             executeBlock(s.statements(), new Environment(environment));
-
         } else if (stmt instanceof Stmt.Verify s) {
             Object condition = evaluate(s.condition());
             if (!(condition instanceof Boolean)) {
                 throw new RuntimeError(s.keyword(), "Condition must be a boolean.");
             }
-
             if ((Boolean) condition) {
                 execute(s.thenBranch());
             } else if (s.elseBranch() != null) {
                 execute(s.elseBranch());
             }
-
         } else if (stmt instanceof Stmt.Abort s){
             throw new BreakSignal();
-
         } else if (stmt instanceof Stmt.Proceed s){
             throw new ContinueSignal();
-
         } else if (stmt instanceof Stmt.While s) {
             try {
                 while (conditionTruth(s.keyword(), evaluate(s.condition()))) {
@@ -101,13 +99,11 @@ class Interpreter {
             } catch (BreakSignal b) {
                 // abort: leave the loop
             }
- 
         } else if (stmt instanceof Stmt.For s) {
             Environment previous = this.environment;
             try {
                 this.environment = new Environment(previous);       // the loop variable lives in here
                 if (s.initializer() != null) execute(s.initializer());
- 
                 try {
                     // a missing condition means "always true"
                     while (s.condition() == null || conditionTruth(s.keyword(), evaluate(s.condition()))) {
@@ -185,7 +181,6 @@ class Interpreter {
 
 
     // Expressions 
-
     private Object evaluate(Expr expr) {
         if (expr instanceof Expr.Literal e) return e.value();
         if (expr instanceof Expr.Grouping e) return evaluate(e.expression());
@@ -193,7 +188,7 @@ class Interpreter {
         if (expr instanceof Expr.Binary e) return EvalBinary(e);
         if (expr instanceof Expr.Logical e) return EvalLogical(e);
         if (expr instanceof Expr.Variable e) return environment.get(e.name());
-        if (expr instanceof Expr.Input e) return readLine(e.keyword());
+        if (expr instanceof Expr.Input e) return readLine(e.keyword(), e.kind());
         if (expr instanceof Expr.Call e) {
             Object result = callOperation(e);
             if (result == null) {
@@ -204,10 +199,10 @@ class Interpreter {
         throw new IllegalStateException("Unknown expression" + expr);
     }
 
+
     private Object EvalUnary(Expr.Unary e) {
         Object right = evaluate(e.right());
         Token op = e.operator();
-
         switch (op.type) {
             case MINUS:
                 if (right instanceof Integer i) return -i;
@@ -220,6 +215,7 @@ class Interpreter {
         }
     }
 
+
     private Object EvalLogical(Expr.Logical e) {
         Token op = e.operator();
         boolean left = requireBoolean(op, evaluate(e.left()));
@@ -230,6 +226,7 @@ class Interpreter {
 
         return requireBoolean(op, evaluate(e.right()));
     }
+
 
     private Object EvalBinary(Expr.Binary e) {
         Object left = evaluate(e.left());
@@ -258,6 +255,7 @@ class Interpreter {
         return doubleMath(op, ((Number) left).doubleValue(), ((Number) right).doubleValue());
     }
 
+
     private Object intMath(Token op, int a, int b) { 
         switch(op.type) {
             case PLUS:   return a + b;
@@ -277,6 +275,7 @@ class Interpreter {
                 throw new IllegalStateException("Bad binary operator: " + op.type);
         }
     }
+
 
     private Object doubleMath(Token op, double a, double b) {
         switch (op.type) {
@@ -332,6 +331,7 @@ class Interpreter {
         }
     }
  
+
     //  call an operation. Returns its value, or null if it finished without 'extract value;'.
     private Object callOperation(Expr.Call call) {
         String name = call.name().lexeme;
@@ -386,21 +386,34 @@ class Interpreter {
         throw new RuntimeError(keyword, "Condition must be a boolean.");
     }
 
-    // the intel.in(), read one line from the keyboard (always a string)
-    private String readLine(Token keyword) {
+    private String readRawLine(Token keyword, String kind) {
         try {
             String line = stdin.readLine();
-            if (line == null) throw new RuntimeError(keyword, "No input available for intel.in().");
+            if (line == null) {
+                throw new RuntimeError(keyword, "No input available for intel." + kind + "().");
+            }
             return line;
         } catch (IOException ex) {
             throw new RuntimeError(keyword, "Could not read input.");
         }
     }
 
+    // the intel.in(), read one line from the keyboard (always a string)
+    
+    private Object readLine(Token keyword, String kind) {
+    String line = readRawLine(keyword, kind);
+    if (kind.equals("int")) return parseWholeNumber(keyword, line);
+    if (kind.equals("num")) return parseNumber(keyword, line);
+    return line;
+}
+
+
+
     private boolean requireBoolean(Token op, Object value) {
         if (value instanceof Boolean b) return b;
         throw new RuntimeError(op, "Operand must be a boolean.");
     }
+
 
     private boolean isEqual(Object a, Object b) {
         if (a instanceof Number x && b instanceof Number y) {
@@ -409,10 +422,36 @@ class Interpreter {
         return a.equals(b); // different types is false
     }
 
+
     // how a value is shown by intel.out() and string "+"
     private String stringify(Object value) {
         if (value instanceof Boolean b) return b ? "affirmative" : "denied";
         return String.valueOf(value);
     }
 
+    private Object parseNumber(Token keyword, String line) {
+        String text = line.trim();
+        if (!text.matches("-?\\d+(\\.\\d+)?")) {
+            throw new RuntimeError(keyword, "Expected a number but got '" + line + "'.");
+        }
+        if (text.contains(".")) return Double.parseDouble(text);
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException ex) {
+            throw new RuntimeError(keyword, "Number is too large: " + text);
+        }
+    }
+
+    private Object parseWholeNumber(Token keyword, String line) {
+        String text = line.trim();
+        if (!text.matches("-?\\d+")) {
+            throw new RuntimeError(keyword, "Expected a whole number but got '" + line + "'.");
+        }
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException ex) {
+            throw new RuntimeError(keyword, "Number is too large: " + text);
+        }
+    }
 }
+

@@ -1,5 +1,5 @@
-//Signals.java  -- abort and proceed are not errors, so they do NOT extend RuntimeError.
-// super(null, null, false, false) turns off the stack trace: faster, and nothing noisy can print.
+//Signals.java  
+// super(null, null, false, false) 
 
 class BreakSignal extends RuntimeException {
     BreakSignal() {
@@ -13,7 +13,6 @@ class ContinueSignal extends RuntimeException {
     }
 }
 
-// extract travels up to the operation call that is running, carrying the value
 class ReturnSignal extends RuntimeException {
     final Object value;
  

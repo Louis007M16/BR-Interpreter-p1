@@ -9,6 +9,6 @@ interface Expr {
     record Unary(Token operator, Expr right) implements Expr {}           // -x, not x
     record Binary(Expr left, Token operator, Expr right) implements Expr {}   // + - * / % == != < <= > >=
     record Logical(Expr left, Token operator, Expr right) implements Expr {}  // and, or (short-circuit)
-    record Call(Token name, List<Expr> arguments) implements Expr {}
-    record Input(Token keyword) implements Expr {}                     
+    record Call(Token name, List<Expr> arguments) implements Expr {}        // func
+    record Input(Token keyword, String kind) implements Expr {}                     // intel.in()
 }
