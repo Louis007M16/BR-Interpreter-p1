@@ -14,13 +14,13 @@ agent string = "Hello"
 # Input & Output
 **intel.log()**
 ```br
-intel.log("Hello World!\n")  -.-. Outputs `Hello World!` to the console
+intel.log("Hello World!\n");  -.-. Outputs `Hello World!` to the console
 ```
 **intel.in()**
 ```br
-agent input = intel.in()  -.-. Parses input from user as a string
-intel.int() -.-. integer only
-intel.num() -.-. Parses integer and double input 
+agent input = intel.in();  -.-. Parses input from user as a string
+intel.int();-.-. integer only
+intel.num(); -.-. Parses integer and double input 
 ```
 **If-else Statements**
 ```br
@@ -65,10 +65,10 @@ protocol (expr) {
 ```
 # Break / Continue
 ```br
-abort     -.-. break
+abort;     -.-. break
 ```
 ```br
-proceed   -.-. continue
+proceed;   -.-. continue
 ```
 
 # Function
@@ -94,8 +94,8 @@ extract   -.-. return
 # Example Program:
 ```br
 operation greetAgent(name) {
-    intel.log("Welcome, Agent " + name + "!\n")
-    extract
+    intel.log("Welcome, Agent " + name + "!\n");
+    extract name;
 }
 
 mission() { -.-. main function
@@ -104,38 +104,38 @@ mission() { -.-. main function
   -.-. ===================================
 
 
-  agent string = "Shadow"
-  agent number = 3
-  agent bool = confirmed
+  agent string = "Shadow";
+  agent number = 3;
+  agent bool = confirmed;
 
-  intel.log("=== SPYSCRIPT AGENT SYSTEM ===\n")
-  intel.log("Enter your agent name: ")
+  intel.log("=== SPYSCRIPT AGENT SYSTEM ===\n");
+  intel.log("Enter your agent name: ");
 
-  agent input = intel.in()
+  agent input = intel.in();
 
-  greetAgent(input)
+  greetAgent(input);
 
   verify (number > 0) {
-      intel.log("Mission status: ACTIVE\n")
+      intel.log("Mission status: ACTIVE\n");
   } otherwise {
-      intel.log("Mission status: INACTIVE\n")
+      intel.log("Mission status: INACTIVE\n");
   }
 
-  intel.log("\nMission countdown:\n")
+  intel.log("\nMission countdown:\n");
 
   penetrate (agent i = 3; i > 0; i--) {
-      intel.log(i + "\n")
+      intel.log(i + "\n");
   }
 
-  intel.log("Mission launched!\n")
+  intel.log("Mission launched!\n");
 
   verify (bool) {
-      intel.log("Authorization: GRANTED\n")
+      intel.log("Authorization: GRANTED\n");
   } otherwise {
-      intel.log("Authorization: DENIED\n")
+      intel.log("Authorization: DENIED\n");
   }
 
-  intel.log("\n=== SYSTEM SHUTDOWN ===\n")
+  intel.log("\n=== SYSTEM SHUTDOWN ===\n");
 }
 ```
 **Output**
