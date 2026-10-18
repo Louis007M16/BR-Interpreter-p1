@@ -12,4 +12,8 @@ interface Stmt {
     record Proceed(Token keyword) implements Stmt {}
     record Section(Token keyword, Object value, boolean isDefault, List<Stmt> body) {}
     record Protocol(Token keyword, Expr subject, List<Section> sections) implements Stmt {}
+    record Mission(Token keyword, Block body) implements Stmt {}
+    record Function(Token name, List<Token> params ,Block body) implements Stmt {}
+    record Return(Token keyword, Expr value) implements Stmt {}
+    record Expression(Expr expression) implements Stmt {}
 } 

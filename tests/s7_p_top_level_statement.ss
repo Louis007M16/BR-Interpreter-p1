@@ -1,0 +1,2 @@
+intel.log("x");
+mission() { }

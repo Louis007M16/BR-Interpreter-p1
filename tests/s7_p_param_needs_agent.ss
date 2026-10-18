@@ -1,0 +1,2 @@
+operation f(a) { }
+mission() { }

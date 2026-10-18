@@ -1,6 +1,8 @@
 // Parser
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
 
 
 class Parser {
@@ -13,6 +15,9 @@ class Parser {
 
     private int loopDepth = 0;
     private int switchDepth = 0;
+
+    private boolean sawMission = false;
+    private final Set<String> operationNames = new HashSet<>();
 
 
     Parser(List<Token> tokens) {
@@ -31,17 +36,107 @@ class Parser {
 
     // Statements
 
-    // program to statements* EOF
     List<Stmt> parse() {
-        List<Stmt> statements = new ArrayList<>();
+        List<Stmt> declarations = new ArrayList<>();
         while (!isAtEnd()) {
             try {
-                statements.add(statements());
+                declarations.add(topLevel());
             } catch (ParseError e) {
-                synchronize();
+                synchronizeTopLevel();
             }
         }
-        return statements;
+        if (!sawMission && !hadError) {
+            error(peek(), "Program needs a 'mission()' entry point.");
+        }
+        return declarations;
+    }
+
+    private Stmt topLevel() {
+        if (match(TokenType.AGENT)) return agentStatement();          // a global variable
+        if (match(TokenType.OPERATION)) return operationDeclaration();
+        if (match(TokenType.MISSION)) return missionDeclaration();
+        throw error(peek(), "Only 'agent', 'operation' and 'mission' declarations are allowed at the top level.");
+    }
+
+    // After a top-level error: skip to the next top-level keyword, but only OUTSIDE any { } pair
+    private void synchronizeTopLevel() {
+        int depth = 0;
+        do {
+            Token t = advance();
+            if (t.type == TokenType.LBRACES) depth++;
+            else if (t.type == TokenType.RBRACES && depth > 0) depth--;
+        } while (!isAtEnd() && !(depth == 0 && (check(TokenType.AGENT)
+                || check(TokenType.OPERATION) || check(TokenType.MISSION))));
+    }
+
+    // operation name ( agent a, agent b ) { body }
+    private Stmt operationDeclaration() {
+        Token name = consume(TokenType.IDENTIFIER, "Expect operation name.");
+        if (!operationNames.add(name.lexeme)) {
+            error(name, "Operation '" + name.lexeme + "' is already declared.");     // reported, not thrown
+        }
+ 
+        consume(TokenType.LPAREN, "Expect '(' after operation name.");
+        List<Token> params = new ArrayList<>();
+        if (!check(TokenType.RPAREN)) {
+            do {
+                consume(TokenType.AGENT, "Expect 'agent' before parameter name.");
+                Token param = consume(TokenType.IDENTIFIER, "Expect parameter name.");
+                for (Token earlier : params) {
+                    if (earlier.lexeme.equals(param.lexeme)) {
+                        error(param, "Duplicate parameter '" + param.lexeme + "'.");
+                    }
+                }
+                params.add(param);
+            } while (match(TokenType.COMMA));
+        }
+        consume(TokenType.RPAREN, "Expect ')' after parameters.");
+        consume(TokenType.LBRACES, "Expect '{' before operation body.");
+        Stmt.Block body = (Stmt.Block) blockStatement();
+        return new Stmt.Function(name, params, body);
+    }
+ 
+    // mission ( ) { body }
+    private Stmt missionDeclaration() {
+        Token keyword = previous();
+        if (sawMission) error(keyword, "Only one 'mission()' is allowed.");           // reported, not thrown
+        sawMission = true;
+ 
+        consume(TokenType.LPAREN, "Expect '(' after 'mission'.");
+        consume(TokenType.RPAREN, "Expect ')' after 'mission('.");
+        consume(TokenType.LBRACES, "Expect '{' before mission body.");
+        Stmt.Block body = (Stmt.Block) blockStatement();
+        return new Stmt.Mission(keyword, body);
+    }
+ 
+    // extract ;     extract expression ;
+    private Stmt extractStatement() {
+        Token keyword = previous();
+        Expr value = null;
+        if (!check(TokenType.SEMI_COLON)) value = expression();
+        consume(TokenType.SEMI_COLON, "Expect ';' after 'extract'.");
+        return new Stmt.Return(keyword, value);
+    }
+ 
+    // greet(1, 2);      (the name was already consumed)
+    private Stmt callStatement() {
+        Token name = previous();
+        consume(TokenType.LPAREN, "Expect '(' after operation name.");
+        Expr call = finishCall(name);
+        consume(TokenType.SEMI_COLON, "Expect ';' after operation call.");
+        return new Stmt.Expression(call);
+    }
+ 
+    // the part of a call after "name(" :  arguments ")"
+    private Expr finishCall(Token name) {
+        List<Expr> arguments = new ArrayList<>();
+        if (!check(TokenType.RPAREN)) {
+            do {
+                arguments.add(expression());
+            } while (match(TokenType.COMMA));
+        }
+        consume(TokenType.RPAREN, "Expect ')' after arguments.");
+        return new Expr.Call(name, arguments);
     }
 
 
@@ -49,7 +144,11 @@ class Parser {
     private Stmt statements() {
         if (match(TokenType.INTEL)) return intelStatement();
         if (match(TokenType.AGENT)) return agentStatement();
-        if (match(TokenType.IDENTIFIER)) return assignmentCase();
+        if (match(TokenType.IDENTIFIER)) {
+            if (check(TokenType.LPAREN)) return callStatement();
+            return assignmentCase();
+        };
+        if (match(TokenType.EXTRACT)) return extractStatement();
         if (match(TokenType.VERIFY)) return verifyStatement();
         if (match(TokenType.LBRACES)) return blockStatement();
         if (match(TokenType.INFILTRATE)) return infiltrateStatement();
@@ -238,7 +337,9 @@ class Parser {
         }
 
         if (match(TokenType.IDENTIFIER)) {
-            return new Expr.Variable(previous());
+            Token name = previous();
+            if (match(TokenType.LPAREN)) return finishCall(name);
+            return new Expr.Variable(name);
         }
 
         if (match(TokenType.LPAREN)) {
@@ -376,7 +477,7 @@ class Parser {
     private Stmt abortStatement() {
         Token keyword = previous();
         if (loopDepth == 0 && switchDepth == 0) 
-        throw error(keyword, "'abort' can only be used inside a loop.");
+        throw error(keyword, "'abort' can only be used inside a loop or 'protocol'.");
         consume(TokenType.SEMI_COLON, "Expect ';' after 'abort'.");
         return new Stmt.Abort(keyword);
     }

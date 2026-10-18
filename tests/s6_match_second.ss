@@ -1,6 +1,7 @@
-agent x = 2;
+mission() { agent x = 2;
 protocol (x) {
     rule 1: intel.log("one"); abort;
     rule 2: intel.log("two"); abort;
     default: intel.log("other");
+}
 }

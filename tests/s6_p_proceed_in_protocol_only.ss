@@ -1,1 +1,2 @@
-protocol (1) { rule 1: proceed; }
+mission() { protocol (1) { rule 1: proceed; }
+}

@@ -1,5 +1,6 @@
 //Expr.java
 //  every kind of expression the language has
+import java.util.List;
 
 interface Expr {
     record Literal(Object value) implements Expr {}                       // 10, 3.5, "hi", W, L
@@ -8,5 +9,6 @@ interface Expr {
     record Unary(Token operator, Expr right) implements Expr {}           // -x, not x
     record Binary(Expr left, Token operator, Expr right) implements Expr {}   // + - * / % == != < <= > >=
     record Logical(Expr left, Token operator, Expr right) implements Expr {}  // and, or (short-circuit)
+    record Call(Token name, List<Expr> arguments) implements Expr {}
     record Input(Token keyword) implements Expr {}                     
 }

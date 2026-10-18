@@ -9,7 +9,7 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class Main {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
        if (args.length != 1) {
             System.err.println("Usage: java Main <file.br>");
             System.exit(64);
@@ -24,9 +24,12 @@ public class Main {
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
         if (parser.hadError) System.exit(65);       // ...or one that failed to parse
- 
+
+        // run on a thread with a 256 MB stack, so recursion can go thousands of calls deep
         Interpreter interpreter = new Interpreter();
-        interpreter.interpret(statements);
+        Thread worker = new Thread(null, () -> interpreter.interpret(statements), "interpreter", 256L * 1024 * 1024);
+        worker.start();
+        worker.join();
         if (interpreter.hadRuntimeError) System.exit(70);
     }
 }

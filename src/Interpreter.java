@@ -4,22 +4,39 @@ import java.util.List;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Map;
 
 class Interpreter {
 
     boolean hadRuntimeError = false;
 
-    private Environment environment = new Environment(); //global
+    private final Environment globals = new Environment(); //global
+    private Environment environment = globals;
+
+    private final Map<String, Stmt.Function> operations = new HashMap<>();
+    private int callDepth = 0;
+    private static final int MAX_CALL_DEPTH = 5000;
 
     // created ONCE, making a new reader per intel.in() call would lose buffered input
     private final BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
 
     // run a whole program; stop at the first runtime error
-    void interpret(List<Stmt> statements) {
+    //  1. register every operation (so one may be called before it is written in the file)
+    //  2. run the global 'agent' declarations, top to bottom
+    //  3. run mission()
+    void interpret(List<Stmt> program) {
         try {
-            for (Stmt statement : statements) {
-                execute(statement);
+            Stmt.Mission mission = null;
+            for (Stmt declaration : program) {
+                if (declaration instanceof Stmt.Function f) operations.put(f.name().lexeme, f);
+                else if (declaration instanceof Stmt.Mission m) mission = m;
             }
+            for (Stmt declaration : program) {
+                if (declaration instanceof Stmt.Agent) execute(declaration);
+            }
+            if (mission != null) runMission(mission);
         } catch (RuntimeError error) {
             System.out.flush();
             System.err.println("[line " + error.token.line + "] Runtime error: " + error.getMessage());
@@ -149,6 +166,17 @@ class Interpreter {
                 this.environment = previous;
             }
 
+        } else if (stmt instanceof Stmt.Expression s) {
+            if (s.expression() instanceof Expr.Call call) {
+                callOperation(call);                    // the result (if any) is thrown away
+            } else {
+                evaluate(s.expression());
+            }
+ 
+        } else if (stmt instanceof Stmt.Return s) {
+            Object value = (s.value() == null) ? null : evaluate(s.value());
+            throw new ReturnSignal(value);              // travels up to callOperation()
+
         } else {
             throw new IllegalStateException("Unknown Statement:" + stmt);
         }
@@ -166,6 +194,13 @@ class Interpreter {
         if (expr instanceof Expr.Logical e) return EvalLogical(e);
         if (expr instanceof Expr.Variable e) return environment.get(e.name());
         if (expr instanceof Expr.Input e) return readLine(e.keyword());
+        if (expr instanceof Expr.Call e) {
+            Object result = callOperation(e);
+            if (result == null) {
+                throw new RuntimeError(e.name(), "Operation '" + e.name().lexeme + "' did not return a value.");
+            }
+            return result;
+        }
         throw new IllegalStateException("Unknown expression" + expr);
     }
 
@@ -280,6 +315,70 @@ class Interpreter {
             this.environment = previous;
         }
     }
+
+
+    // run mission() in its own scope, whose parent is the global scope
+    private void runMission(Stmt.Mission mission) {
+        Environment previous = this.environment;
+        try {
+            this.environment = new Environment(globals);
+            for (Stmt statement : mission.body().statements()) {
+                execute(statement);
+            }
+        } catch (ReturnSignal r) {
+            // 'extract' inside mission() ends the program
+        } finally {
+            this.environment = previous;
+        }
+    }
+ 
+    //  call an operation. Returns its value, or null if it finished without 'extract value;'.
+    private Object callOperation(Expr.Call call) {
+        String name = call.name().lexeme;
+        Stmt.Function operation = operations.get(name);
+        if (operation == null) {
+            throw new RuntimeError(call.name(), "Undefined operation '" + name + "'.");
+        }
+ 
+        int expected = operation.params().size();
+        int given = call.arguments().size();
+        if (expected != given) {
+            throw new RuntimeError(call.name(), "Operation '" + name + "' expects " + expected
+                    + (expected == 1 ? " argument" : " arguments") + " but got " + given + ".");
+        }
+ 
+        // arguments are worked out in the CALLER's scope, left to right
+        List<Object> values = new ArrayList<>();
+        for (Expr argument : call.arguments()) {
+            values.add(evaluate(argument));
+        }
+ 
+        if (callDepth >= MAX_CALL_DEPTH) {
+            throw new RuntimeError(call.name(), "Stack overflow: too many nested operation calls.");
+        }
+ 
+        // the call gets a fresh scope whose parent is the GLOBAL scope, so it cannot see the caller's locals
+        Environment callScope = new Environment(globals);
+        for (int n = 0; n < expected; n++) {
+            callScope.define(operation.params().get(n).lexeme, values.get(n));
+        }
+ 
+        Environment previous = this.environment;
+        callDepth++;
+        try {
+            this.environment = callScope;
+            for (Stmt statement : operation.body().statements()) {    // parameters and body locals share one scope
+                execute(statement);
+            }
+        } catch (ReturnSignal r) {
+            return r.value;
+        } finally {
+            this.environment = previous;
+            callDepth--;
+        }
+        return null;        // reached the closing brace without 'extract value;'
+    }
+
 
     // a loop condition must be a boolean
     private boolean conditionTruth(Token keyword, Object value) {

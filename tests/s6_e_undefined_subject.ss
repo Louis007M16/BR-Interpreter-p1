@@ -1,1 +1,2 @@
-protocol (zz) { }
+mission() { protocol (zz) { }
+}

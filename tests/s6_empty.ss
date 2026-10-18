@@ -1,2 +1,3 @@
-protocol (1) { }
+mission() { protocol (1) { }
 intel.log("ok");
+}

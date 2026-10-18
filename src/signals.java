@@ -12,3 +12,13 @@ class ContinueSignal extends RuntimeException {
         super(null, null, false, false);
     }
 }
+
+// extract travels up to the operation call that is running, carrying the value
+class ReturnSignal extends RuntimeException {
+    final Object value;
+ 
+    ReturnSignal(Object value) {
+        super(null, null, false, false);
+        this.value = value;
+    }
+}
