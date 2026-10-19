@@ -196,7 +196,7 @@ class Parser {
         if(match(TokenType.PLUS_PLUS, TokenType.MINUS_MINUS)) {
             Token op = previous();
             TokenType kind = (op.type == TokenType.PLUS_PLUS) ? TokenType.PLUS : TokenType.MINUS;
-            Token arithmetic = new Token(kind, op.lexeme.substring(0, 1), null, op.line);
+            Token arithmetic = new Token(kind, op.lexeme.substring(0, 1), null, op.line, op.column);
             Expr value = new Expr.Binary(new Expr.Variable(name), arithmetic, new Expr.Literal(1));
             return new Stmt.Assign(name, value);
         }
@@ -218,7 +218,7 @@ class Parser {
 
     // After an error: throw away tokens until one that can start a statement.
     private void synchronize() {
-        advance(); // always move forward at least one token, or we could loop forever
+        if (!check(TokenType.RBRACES)) advance(); // always move forward at least one token, or we could loop forever
         while (!isAtEnd()) {
             if (previous().type == TokenType.SEMI_COLON) return;
             switch (peek().type) {
@@ -638,7 +638,7 @@ class Parser {
     private ParseError error(Token token, String message) {
         hadError = true;
         String where = (token.type == TokenType.EOF) ? "at end" : "at '" + token.lexeme + "'";
-        System.err.println("[line " + token.line + "] Error " + where + ": " + message);
+        System.err.println("[line " + token.line + ", col " + token.column + "] Error " + where + ": " + message);
         return new ParseError();
     }
 

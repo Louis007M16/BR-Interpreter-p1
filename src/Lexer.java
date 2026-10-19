@@ -13,6 +13,8 @@ class Lexer {
     private int start = 0;
     private int current = 0;
     private int line = 1;
+    private int lineStart = 0;
+    private int startLine = 1, startColumn = 1;
 
     boolean hadError = false;
 
@@ -50,10 +52,12 @@ class Lexer {
     List<Token> scanTokens() {
         while (!isAtEnd()) {
             start = current;
+            startLine = line;
+            startColumn = start - lineStart + 1;
             scanToken();
         }
 
-        tokens.add(new Token(TokenType.EOF, "", null, line));
+        tokens.add(new Token(TokenType.EOF, "", null, line, current - lineStart + 1));
         return tokens;
     }
 
@@ -75,12 +79,12 @@ class Lexer {
 
             case '&':
                 if (match('&')) addToken(TokenType.AND);
-                else error(line, "Unexpected character '&'. Did you mean '&&'?");
+                else error("&", "Unexpected character '&'. Did you mean '&&'?");
                 break;
 
             case '|':
                 if (match('|')) addToken(TokenType.OR);
-                else error(line, "Unexpected character '|'. Did you mean '||'?");
+                else error("|", "Unexpected character '|'. Did you mean '||'?");
                 break;
             case '*': addToken(TokenType.STAR); break;
             case '%': addToken(TokenType.PERCENT); break;
@@ -115,6 +119,7 @@ class Lexer {
                 break;
             case '\n'://newline, skip and count
                 line++; 
+                lineStart = current;
                 break;
 
             // String start
@@ -128,7 +133,7 @@ class Lexer {
                 } else if (isAlpha(c)) {
                     identifier();
                 } else {
-                    error(line, "Unexpected character");
+                    error(String.valueOf(c), "Unexpected character.");
                 }
                 break;
         }
@@ -162,7 +167,7 @@ class Lexer {
             try {
                 addToken(TokenType.NUMBER, Integer.parseInt(text));
             } catch (NumberFormatException e) {
-                error(line, "Number is too large: " + text);
+                error(text, "Number is too large.");
             }
         }
     }
@@ -172,7 +177,7 @@ class Lexer {
         StringBuilder value = new StringBuilder();
         while (peek() != '"' && !isAtEnd()) {
             char c = advance();
-            if (c == '\n') line++;
+            if (c == '\n') { line++; lineStart = current; }
             if (c == '\\' && !isAtEnd()) {
                 char next = advance();
                 switch (next) {
@@ -181,7 +186,7 @@ class Lexer {
                     case '"':  value.append('"');  break;
                     case '\\': value.append('\\'); break;
                     default:
-                        error(line, "Unknown escape sequence '\\" + next + "'.");
+                        error("\\" + next, "Unknown escape sequence.");
                 }
             } else {
                 value.append(c);
@@ -189,7 +194,7 @@ class Lexer {
         }
 
         if (isAtEnd()) {
-            error(line, "Unterminated string.");
+            error("\"", "Unterminated string.");
             return;
         }
 
@@ -250,9 +255,10 @@ class Lexer {
     }
 
     //error
-    private void error(int line, String message) {
+    private void error(String lexeme, String message) {
+        System.err.println("[line " + startLine + ", col " + startColumn
+                + "] Error at '" + lexeme + "': " + message);
         hadError = true;
-        System.err.println("[line " + line + "] " + message);
     }
 
 
@@ -263,7 +269,7 @@ class Lexer {
 
     private void addToken(TokenType type, Object literal) {
         String text = source.substring(start, current);
-        tokens.add(new Token(type, text, literal, line));
+        tokens.add(new Token(type, text, literal, startLine, startColumn));
     }
 
 

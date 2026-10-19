@@ -8,19 +8,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 public class Main {
     public static void main(String[] args) {
        if (args.length != 1) {
-            System.err.println("Usage: java Main <file.br>");
+            System.err.println("Usage: java -jar spyscript.jar <file.ss>");
             System.exit(64);
-            return;
         }
  
         final String source;
 
         try {
-            source = Files.readString(Paths.get(args[0]));
+            source = new String(Files.readAllBytes(Paths.get(args[0])), StandardCharsets.UTF_8);
         } catch (IOException | SecurityException e) {
             System.err.println("Error: cannot read file '" + args[0] + "'.");
             System.exit(66);

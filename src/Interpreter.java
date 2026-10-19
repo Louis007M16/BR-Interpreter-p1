@@ -44,7 +44,7 @@ class Interpreter {
             if (mission != null) runMission(mission);
         } catch (RuntimeError error) {
             System.out.flush();
-            System.err.println("[line " + error.token.line + "] Runtime error: " + error.getMessage());
+            System.err.println("[line " + error.token.line + ", col " + error.token.column + "] Runtime error: " + error.getMessage());
             hadRuntimeError = true;
         }
     }
@@ -249,7 +249,11 @@ class Interpreter {
 
         // int op int stays an int, anything involving a decimal becomes a decimal
         if (left instanceof Integer a && right instanceof Integer b) {
-            return intMath(op, a, b);
+            try {
+                return intMath(op, a, b);
+            } catch (ArithmeticException ex) {
+                throw new RuntimeError(op, "Integer overflow.");
+            }
         }
 
         return doubleMath(op, ((Number) left).doubleValue(), ((Number) right).doubleValue());
@@ -258,9 +262,9 @@ class Interpreter {
 
     private Object intMath(Token op, int a, int b) { 
         switch(op.type) {
-            case PLUS:   return a + b;
-            case MINUS:  return a - b;
-            case STAR:   return a * b;
+            case PLUS:  return Math.addExact(a, b);
+            case MINUS: return Math.subtractExact(a, b);
+            case STAR:  return Math.multiplyExact(a, b);
             case SLASH: 
                 if (b == 0) throw new  RuntimeError(op, "Division by zero.");
                 return a / b;

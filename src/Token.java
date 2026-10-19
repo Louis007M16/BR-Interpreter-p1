@@ -4,18 +4,20 @@ class Token {
     final String lexeme;
     final Object literal;
     final int line;
+    final int column;
 
-    Token(TokenType type, String lexeme, Object literal, int line) {
+    Token(TokenType type, String lexeme, Object literal, int line, int column) {
         this.type = type;
         this.lexeme = lexeme;
         this. literal = literal;
         this.line = line;
+        this.column = column;
     }
 
     @Override
     public String toString() {
         return "{ Value: " + lexeme + " " + literal +
-            " -> Type: " + type + " " + type.ordinal() + " }";
+            " -> Type: " + type + " (line " + line + ", col " + column + ") }";
     }
 
 }
